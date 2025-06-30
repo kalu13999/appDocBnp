@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  client    Client?  @relation(fields: [clientId], references: [id])
+  clientId  Int?
+
+  sessions Session[]
+  logs     Log[] // campo inverso para relação com Log
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Client {
+  id     Int     @id @default(autoincrement())
+  name   String
+  users  User[]
+  orders Order[]
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  clientId  Int
+  client    Client      @relation(fields: [clientId], references: [id])
+  title     String
+  status    OrderStatus @default(RECEIVED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  documents Document[]
+}
+
+model Document {
+  id          Int       @id @default(autoincrement())
+  orderId     Int
+  order       Order     @relation(fields: [orderId], references: [id])
+  fileName    String
+  filePath    String
+  metadata    Json
+  indexed     Boolean   @default(false)
+  validated   Boolean   @default(false)
+  validatedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  logs Log[] // campo inverso para relação com Log
+}
+
+model Log {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  document   Document @relation(fields: [documentId], references: [id])
+  action     String
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  timestamp  DateTime @default(now())
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  REVIEWER
+  CLIENT
+}
+
+enum OrderStatus {
+  RECEIVED
+  DOCUMENTS_RECEIVED
+  SCANNED
+  INDEXED
+  QA_DONE
+  SENT_TO_CLIENT
+  VALIDATED
+  REJECTED
+}
